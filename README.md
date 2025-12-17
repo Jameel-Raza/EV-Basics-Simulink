@@ -17,6 +17,6 @@ refined or validated further over time.
 - Simulink
 - Simscape Electrical OR Specialized Power Systems
 
-# Disclaimer
+## Disclaimer
 These models are for educational use only and are not intended
 for commercial or safety-critical EV design.
