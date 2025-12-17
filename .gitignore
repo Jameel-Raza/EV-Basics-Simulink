@@ -1,0 +1,9 @@
+# MATLAB / Simulink generated files
+slprj/
+*.slxc
+*.asv
+*.m~
+
+# OS junk
+.DS_Store
+Thumbs.db
