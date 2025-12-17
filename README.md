@@ -12,11 +12,11 @@ The repository is structured into:
 Some simulations are preliminary academic models and may be
 refined or validated further over time.
 
-# Requirements
+## Requirements
 - MATLAB (R2022a or later recommended)
 - Simulink
-- Simscape Electrical
+- Simscape Electrical OR Specialized Power Systems
 
-# Disclaimer
+## Disclaimer
 These models are for educational use only and are not intended
 for commercial or safety-critical EV design.
