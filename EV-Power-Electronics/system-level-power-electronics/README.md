@@ -110,10 +110,132 @@ We utilized a **Universal Bridge** configured with 6 diodes.
 ## 6. Key Learnings & Observations
 * **Passive vs. Active Front Ends:** We observed that while diodes are simple, they offer no control over the DC Link voltage, making the system entirely dependent on the grid's nominal value.
 * **Inductor Sizing:** The input inductors are critical; they prevent simulation instability by providing impedance to limit high-frequency current changes.
+* **PI controller parameters' determination:** Solving for P and I constants from the charging staion's Buck converter plant model.
 * **Digital Realism:** Using Unit Delays and discrete solvers is essential for simulating behavior that can be flashed onto real microcontrollers.
+
+## ⚠️ Important Note on Passive Front End (PFE) Behavior and the ~77A Current Observation
+
+This model uses a **Passive Front End (PFE)** consisting of a 3-phase diode bridge and a DC-link capacitor, followed by a **DC-DC Buck Converter** operating under a cascaded **CC–CV PI control** scheme.
+
+If you run this model in its current form, you may observe that the battery current settles around **~77 A**, even when the current reference is set much lower (for example, 20 A).  
+This behavior is **expected** and does **not** indicate a bug in the controller or the simulation.
+
+---
+
+### 1. What the Passive Front End Actually Does
+
+A diode bridge is an **uncontrolled rectifier**.
+
+As a result:
+
+- The DC-link voltage is fixed by the grid peak voltage  
+  \( V_{dc} \approx \sqrt{2} \cdot V_{grid} \)
+- For a typical 3-phase input, this results in a **stiff DC bus of ~540 V**
+- The DC link cannot respond to current or power commands from the controller
+
+The PFE behaves like a **rigid voltage source**, not a regulated power source.
+
+---
+
+### 2. Why This Causes Problems for Current Control
+
+The battery voltage in this model is significantly lower (≈150 V).  
+Stepping down 540 V to 150 V forces the buck converter to operate at a **very low duty cycle**.
+
+This leads to:
+
+- **High sensitivity**: very small duty-cycle changes cause large current changes
+- **Limited control authority**: the controller has very little room to modulate power safely
+
+---
+
+### 3. What Happens at Startup (Key Mechanism)
+
+During startup in **Constant Current (CC) mode**:
+
+- The current error is large
+- The PI controller integrator increases rapidly
+- The duty cycle reaches its **upper saturation limit**
+
+Once saturated:
+
+- The switch is effectively fully ON
+- The buck converter stops acting as a controlled converter
+- The controller loses authority over the current
+
+From this point onward, the system is governed by circuit physics, not control logic.
+
+---
+
+### 4. Why the Current Settles at ~77 A
+
+When the controller is saturated, the current is determined only by:
+
+- DC-link voltage
+- Battery voltage
+- Inductor resistance and other parasitic resistances
+
+The approximate relationship is:
+
+\[
+I \approx \frac{V_{dc} - V_{battery}}{R_{eq}}
+\]
+
+For the component values used in this model, this physical equilibrium occurs at approximately **77 A**.
+
+This value is:
+
+- Not random
+- Not numerical instability
+- Not a PI tuning issue
+
+It is the **natural electrical limit** of the system under a stiff DC source.
+
+---
+
+### 5. Why Constant Voltage (CV) Mode May Appear to Work
+
+In CV mode:
+
+- The battery voltage rises gradually
+- The system naturally moves closer to equilibrium
+- The controller eventually regains some control authority
+
+This can make voltage regulation appear acceptable even though current control is fundamentally compromised.
+
+---
+
+### 6. Key Takeaway
+
+With a **Passive Front End**:
+
+- The DC-DC stage is forced to operate against a stiff, unregulated DC source
+- Reliable Constant Current (CC) regulation is not guaranteed
+- High currents (such as ~77 A) are an expected outcome under controller saturation
+
+This architecture is **not suitable for** precise CC–CV battery charging** without additional regulation.
+
+---
+
+### 7. Recommended Next Step
+
+To enable stable and accurate current control:
+
+- Replace the PFE with an **Active Front End (AFE)**  
+  **or**
+- Add DC-link voltage regulation and proper soft-start mechanisms
+
+Only then can the PI controller operate within a stable and controllable region.
+
+---
+
+### Summary
+
+> **When using a Passive Front End, the observed ~77 A current is the system revealing its physics, not a failure of the controller.**
+
 
 ---
 
 ## 7. Project Status & Future Scope
-* **Module 1 (Complete):** Success in passive rectification and active DC-DC charging.
-* **Module 2 (Upcoming):** Replacing the diode bridge with an **Active Front End (AFE)**. This will utilize a **PLL (Phase Locked Loop)** and **DQ Transformation** to achieve unity power factor and bidirectional V2G capability.
+* **Module 1 (Complete):** Success in passive rectification and active DC-DC Constant Current & Constant Voltage charging.
+* **Module 2 (Upcoming):** Replacing the AC grid side diode bridge with an **Active Front End (AFE)**. This will utilize a **PLL (Phase Locked Loop)** and **DQ Transformation** to achieve unity power factor and bidirectional V2G capability.
